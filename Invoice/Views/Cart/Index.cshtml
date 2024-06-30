@@ -1,0 +1,94 @@
+﻿@model CartView
+
+<h2>Shopping Cart</h2>
+
+@using (Html.BeginForm("AddToCart", "Cart", FormMethod.Post))
+{
+    <div>
+        <label for="productId">Select a Product:</label>
+        <select name="productId" id="productId">
+            @foreach (var product in Model.Products)
+            {
+                <option value="@product.Id">@product.Name - ₹@product.Price</option>
+            }
+        </select>
+        <label for="quantity">Quantity:</label>
+        <input type="number" name="quantity" id="quantity" value="1" min="1" max="10" required />
+        <button type="submit">Add to Cart</button>
+    </div>
+}
+
+<hr />
+
+@if (Model.CartItems.Any())
+{
+    <h3>Cart Items:</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Product Name</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total Price</th>
+                <th>Action</th> <!-- New column for remove action -->
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.CartItems)
+            {
+                <tr>
+                    <td>@item.ProductName</td>
+                    <td>@item.Quantity</td>
+                    <td>₹@item.UnitPrice</td>
+                    <td>₹@(item.Quantity * item.UnitPrice)</td>
+                    <td>
+                        @using (Html.BeginForm("RemoveFromCart", "Cart", FormMethod.Post))
+                        {
+                            @Html.AntiForgeryToken()
+                            @Html.Hidden("productId", item.ProductId)
+                            <button type="submit" class="btn btn-danger">Remove</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <hr />
+
+    @using (Html.BeginForm("GenerateInvoice", "Cart", FormMethod.Post))
+    {
+        <label for="discountId">Select Discount:</label>
+        <select name="discountId" id="discountId">
+            @foreach (var discount in Model.Discounts)
+            {
+                <option value="@discount.Value">@discount.Text</option>
+            }
+        </select>
+        <br />
+
+        <label for="taxId">Select Tax:</label>
+        <select name="taxId" id="taxId">
+            @foreach (var tax in Model.Taxes)
+            {
+                <option value="@tax.Value">@tax.Text</option>
+            }
+        </select>
+        <br />
+
+        <label for="paymentMethodId">Select Payment Method:</label>
+        <select name="paymentMethodId" id="paymentMethodId">
+            @foreach (var method in Model.PaymentMethods)
+            {
+                <option value="@method.Value">@method.Text</option>
+            }
+        </select>
+        <br />
+
+        <button type="submit">Generate Invoice</button>
+    }
+}
+else
+{
+    <p>Your cart is empty.</p>
+}

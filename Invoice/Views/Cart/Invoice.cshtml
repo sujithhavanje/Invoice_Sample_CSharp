@@ -1,0 +1,110 @@
+﻿@model Invoices
+
+<h2>Invoice</h2>
+
+<style>
+    .invoice-container {
+        margin: 20px;
+        border: 1px solid #ccc;
+        padding: 20px;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+
+        .invoice-container table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .invoice-container th, .invoice-container td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .invoice-container th {
+            background-color: #f2f2f2;
+        }
+
+    .invoice-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #ddd;
+        padding-top: 10px;
+        margin-top: 20px;
+    }
+
+    .invoice-summary-item {
+        display: flex;
+        margin-bottom: 8px;
+    }
+
+        .invoice-summary-item span:first-child {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+    .total-amount {
+        font-size: 1.2em;
+        margin-top: 10px;
+    }
+</style>
+
+@if (Model.CartItems.Any())
+{
+    <div class="invoice-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.CartItems)
+                {
+                    <tr>
+                        <td>@item.ProductName</td>
+                        <td>@item.Quantity</td>
+                        <td>₹@item.UnitPrice</td>
+                        <td>₹@(item.Quantity * item.UnitPrice)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="invoice-summary">
+            <div class="invoice-summary-item">
+                <span>Subtotal:</span>
+                <span>₹@Model.Subtotal.ToString("N2")</span>
+            </div>
+            <div class="invoice-summary-item">
+                <span>Discount:</span>
+                <span>₹@Model.DiscountAmount.ToString("N2")</span>
+            </div>
+            <div class="invoice-summary-item">
+                <span>Tax:</span>
+                <span>₹@Model.TaxAmount.ToString("N2")</span>
+            </div>
+            <div class="invoice-summary-item total-amount">
+                <span>Total Amount:</span>
+                <span>₹@Model.TotalAmount.ToString("N2")</span>
+            </div>
+            <div class="invoice-summary-item">
+                <span>Payment Method:</span>
+                <span>@Model.PaymentMethod</span>
+            </div>
+        </div>
+    </div>
+    <div>
+        <a asp-action="Index" asp-controller="Cart" class="btn btn-primary">Back to Cart</a>
+    </div>
+}
+else
+{
+    <p>No items in the invoice.</p>
+}
