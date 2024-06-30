@@ -1,4 +1,5 @@
 ﻿using Invoice.Models;
+using Invoice.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Invoice.Controllers
@@ -6,32 +7,42 @@ namespace Invoice.Controllers
     public class ProductController : Controller
     {
         private readonly CsvHelperService _csvHelperService;
-
-        public ProductController(CsvHelperService csvHelperService)
+        private readonly GenUtility _GenUtility;
+        public ProductController(CsvHelperService csvHelperService, GenUtility GenUtility)
         {
             _csvHelperService = csvHelperService;
+            _GenUtility = GenUtility;
         }
 
         public IActionResult Index()
         {
-            var products = _csvHelperService.GetAllProducts();
-            var categories = _csvHelperService.GetAllCategories();
+            try
+            {
+                var products = _csvHelperService.GetAllProducts();
+                var categories = _csvHelperService.GetAllCategories();
 
-            var productsWithCategoryNames = from product in products
-                                            join category in categories
-                                            on product.CategoryId equals category.Id
-                                            select new Product
-                                            {
-                                                Id = product.Id,
-                                                Name = product.Name,
-                                                Description = product.Description,
-                                                Price = product.Price,
-                                                Quantity = product.Quantity,
-                                                CategoryId = product.CategoryId,
-                                                CategoryName = category.Name
-                                            };
+                var productsWithCategoryNames = from product in products
+                                                join category in categories
+                                                on product.CategoryId equals category.Id
+                                                select new Product
+                                                {
+                                                    Id = product.Id,
+                                                    Name = product.Name,
+                                                    Description = product.Description,
+                                                    Price = product.Price,
+                                                    Quantity = product.Quantity,
+                                                    CategoryId = product.CategoryId,
+                                                    CategoryName = category.Name
+                                                };
+                return View(productsWithCategoryNames);
+            }
 
-            return View(productsWithCategoryNames);
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+                return View(new Product());
+            }
+
         }
 
         public IActionResult Create()
@@ -43,52 +54,92 @@ namespace Invoice.Controllers
         [HttpPost]
         public IActionResult Create(Product product)
         {
-            if (ModelState.IsValid)
+            try
             {
-                _csvHelperService.AddProduct(product);
-                return RedirectToAction("Index");
+                if (ModelState.IsValid)
+                {
+                    _csvHelperService.AddProduct(product);
+                    return RedirectToAction("Index");
+                }
+                ViewBag.Categories = _csvHelperService.GetAllCategories();
+              
             }
-            ViewBag.Categories = _csvHelperService.GetAllCategories();
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+            }
             return View(product);
         }
 
         public IActionResult Edit(int id)
         {
             var product = _csvHelperService.GetProductById(id);
-            if (product == null)
+            try
             {
-                return NotFound();
+                if (product == null)
+                {
+                    return NotFound();
+                }
+                ViewBag.Categories = _csvHelperService.GetAllCategories();
             }
-            ViewBag.Categories = _csvHelperService.GetAllCategories();
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+            }
+
+
             return View(product);
         }
 
         [HttpPost]
         public IActionResult Edit(Product product)
         {
-            if (ModelState.IsValid)
+            try
             {
-                _csvHelperService.UpdateProduct(product);
-                return RedirectToAction("Index");
+                if (ModelState.IsValid)
+                {
+                    _csvHelperService.UpdateProduct(product);
+                    return RedirectToAction("Index");
+                }
+                ViewBag.Categories = _csvHelperService.GetAllCategories();
             }
-            ViewBag.Categories = _csvHelperService.GetAllCategories();
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+            }
             return View(product);
         }
 
         public IActionResult Delete(int id)
         {
             var product = _csvHelperService.GetProductById(id);
-            if (product == null)
+            try
             {
-                return NotFound();
+                if (product == null)
+                {
+                    return NotFound();
+                }
             }
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+            }
+           
             return View(product);
         }
 
         [HttpPost, ActionName("DeleteConfirmed")]
         public IActionResult DeleteConfirmed(int id)
         {
-            _csvHelperService.DeleteProduct(id);
+            try
+            {
+                _csvHelperService.DeleteProduct(id);
+            }
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+            }
+         
             return RedirectToAction("Index");
         }
     }

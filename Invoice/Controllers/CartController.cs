@@ -1,4 +1,5 @@
 ﻿using Invoice.Models;
+using Invoice.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Newtonsoft.Json;
@@ -8,27 +9,43 @@ using System.Text;
 public class CartController : Controller
 {
     private readonly CsvHelperService _csvHelperService;
-
-    public CartController(CsvHelperService csvHelperService)
+    private readonly GenUtility _GenUtility;
+    public CartController(CsvHelperService csvHelperService, GenUtility GenUtility)
     {
         _csvHelperService = csvHelperService;
+        _GenUtility = GenUtility;
     }
 
     private List<CartItem> GetCartItems()
     {
-        if (HttpContext.Session.TryGetValue("CartItems", out byte[] cartItemsData))
+        try
         {
-            var cartItemsJson = Encoding.UTF8.GetString(cartItemsData);
-            return JsonConvert.DeserializeObject<List<CartItem>>(cartItemsJson);
+            if (HttpContext.Session.TryGetValue("CartItems", out byte[] cartItemsData))
+            {
+                var cartItemsJson = Encoding.UTF8.GetString(cartItemsData);
+                return JsonConvert.DeserializeObject<List<CartItem>>(cartItemsJson);
+            }
         }
+        catch (Exception ex)
+        {
+            _GenUtility.LogError(ex);
+        }
+       
         return new List<CartItem>();
     }
 
     private void SaveCartItems(List<CartItem> cartItems)
     {
-        var cartItemsJson = JsonConvert.SerializeObject(cartItems);
-        var cartItemsData = Encoding.UTF8.GetBytes(cartItemsJson);
-        HttpContext.Session.Set("CartItems", cartItemsData);
+        try
+        {
+            var cartItemsJson = JsonConvert.SerializeObject(cartItems);
+            var cartItemsData = Encoding.UTF8.GetBytes(cartItemsJson);
+            HttpContext.Session.Set("CartItems", cartItemsData);
+        }
+        catch (Exception ex)
+        {
+            _GenUtility.LogError(ex);
+        }
     }
 
     public IActionResult Index()
@@ -49,14 +66,15 @@ public class CartController : Controller
         }).ToList();
 
 
-
-        var cartView = new CartView
+        try
         {
-            Products = products,
-            CartItems = cartItems,
-            Discounts = discounts,
-            Taxes = taxes,
-            PaymentMethods = new List<SelectListItem>
+            var cartView = new CartView
+            {
+                Products = products,
+                CartItems = cartItems,
+                Discounts = discounts,
+                Taxes = taxes,
+                PaymentMethods = new List<SelectListItem>
             {
                 new SelectListItem { Value = "1", Text = "Credit Card" },
                 new SelectListItem { Value = "2", Text = "Debit Card" },
@@ -64,9 +82,16 @@ public class CartController : Controller
                  new SelectListItem { Value = "3", Text = "Cash" },
                      new SelectListItem { Value = "3", Text = "Unknown" }
             }
-        };
-
-        return View(cartView);
+            };
+            return View(cartView);
+        }
+        catch (Exception ex)
+        {
+            _GenUtility.LogError(ex);
+            return View(new CartView());
+        }
+        
+       
     }
 
     [HttpPost]
@@ -76,23 +101,34 @@ public class CartController : Controller
         var product = _csvHelperService.GetProductById(productId);
 
         var existingItem = cartItems.Find(item => item.ProductId == productId);
-        if (existingItem != null)
+
+        try
         {
-            existingItem.Quantity += quantity;
-        }
-        else
-        {
-            cartItems.Add(new CartItem
+
+            if (existingItem != null)
             {
-                ProductId = productId,
-                ProductName = product.Name,
-                Quantity = quantity,
-                UnitPrice = product.Price
-            });
+                existingItem.Quantity += quantity;
+            }
+            else
+            {
+                cartItems.Add(new CartItem
+                {
+                    ProductId = productId,
+                    ProductName = product.Name,
+                    Quantity = quantity,
+                    UnitPrice = product.Price
+                });
+            }
+
+            SaveCartItems(cartItems);
+            return RedirectToAction("Index");
+        }
+        catch (Exception ex)
+        {
+            _GenUtility.LogError(ex);
+            return View(new CartItem());
         }
 
-        SaveCartItems(cartItems);
-        return RedirectToAction("Index");
     }
 
     [HttpPost]
@@ -100,15 +136,21 @@ public class CartController : Controller
     {
         var cartItems = GetCartItems();
 
-        // Find the item to remove
-        var itemToRemove = cartItems.FirstOrDefault(item => item.ProductId == productId);
-
-        if (itemToRemove != null)
+        try
         {
-            cartItems.Remove(itemToRemove);
-            SaveCartItems(cartItems); // Save updated cart items
-        }
+            var itemToRemove = cartItems.FirstOrDefault(item => item.ProductId == productId);
 
+            if (itemToRemove != null)
+            {
+                cartItems.Remove(itemToRemove);
+                SaveCartItems(cartItems); // Save updated cart items
+            }
+        }
+        catch (Exception ex)
+        {
+            _GenUtility.LogError(ex);
+         
+        }
         return RedirectToAction("Index");
     }
 
@@ -116,36 +158,42 @@ public class CartController : Controller
     [HttpPost]
     public IActionResult GenerateInvoice(int discountId, int taxId, int paymentMethodId)
     {
-        // Implement your invoice generation logic here
-        // Example: Fetch cart items and calculate totals
-        var cartItems = GetCartItems(); // Replace with your cart retrieval method
-        var discounts = _csvHelperService.LoadDiscounts(); // Replace with your discount service method
-        var taxes = _csvHelperService.LoadTaxes(); // Replace with your tax service method
-
-        // Calculate subtotal
-        decimal subtotal = cartItems.Sum(item => item.Quantity * item.UnitPrice);
-
-        // Apply discount
-        var discount = discounts.FirstOrDefault(d => d.Id == discountId);
-        decimal discountAmount = (discount != null) ? subtotal * (decimal)discount.Percentage / 100 : 0;
-
-        // Apply tax
-        var tax = taxes.FirstOrDefault(t => t.Id == taxId);
-        decimal taxAmount = (tax != null) ? (subtotal - discountAmount) * (decimal)tax.Percentage / 100 : 0;
-
-        // Calculate total amount
-        decimal totalAmount = subtotal - discountAmount + taxAmount;
-
-        var invoice = new Invoices
+        try
         {
-            CartItems = cartItems,
-            Subtotal = subtotal,
-            DiscountAmount = discountAmount,
-            TaxAmount = taxAmount,
-            TotalAmount = totalAmount,
-            PaymentMethod = _csvHelperService.GetPaymentMethodName(paymentMethodId) // Implement a method to get payment method name
-        };
+            var cartItems = GetCartItems();
+            var discounts = _csvHelperService.LoadDiscounts();
+            var taxes = _csvHelperService.LoadTaxes();
 
-        return View("Invoice", invoice);
+            // Calculate subtotal
+            decimal subtotal = cartItems.Sum(item => item.Quantity * item.UnitPrice);
+
+            // Apply discount
+            var discount = discounts.FirstOrDefault(d => d.Id == discountId);
+            decimal discountAmount = (discount != null) ? subtotal * (decimal)discount.Percentage / 100 : 0;
+
+            // Apply tax
+            var tax = taxes.FirstOrDefault(t => t.Id == taxId);
+            decimal taxAmount = (tax != null) ? (subtotal - discountAmount) * (decimal)tax.Percentage / 100 : 0;
+
+            // Calculate total amount
+            decimal totalAmount = subtotal - discountAmount + taxAmount;
+
+            var invoice = new Invoices
+            {
+                CartItems = cartItems,
+                Subtotal = subtotal,
+                DiscountAmount = discountAmount,
+                TaxAmount = taxAmount,
+                TotalAmount = totalAmount,
+                PaymentMethod = _csvHelperService.GetPaymentMethodName(paymentMethodId) // Implement a method to get payment method name
+            };
+            return View("Invoice", invoice);
+        }
+        catch (Exception ex)
+        {
+            _GenUtility.LogError(ex);
+            return View(new Invoices());
+        }
+
     }
 }

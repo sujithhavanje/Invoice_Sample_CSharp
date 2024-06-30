@@ -1,4 +1,5 @@
 ﻿using Invoice.Models;
+using Invoice.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Invoice.Controllers
@@ -6,10 +7,11 @@ namespace Invoice.Controllers
     public class CategoryController : Controller
     {
         private readonly CsvHelperService _csvHelperService;
-
-        public CategoryController(CsvHelperService csvHelperService)
+        private readonly GenUtility _GenUtility;
+        public CategoryController(CsvHelperService csvHelperService, GenUtility  GenUtility)
         {
             _csvHelperService = csvHelperService;
+            _GenUtility = GenUtility;
         }
 
         public IActionResult Index()
@@ -26,49 +28,96 @@ namespace Invoice.Controllers
         [HttpPost]
         public IActionResult Create(Category category)
         {
-            if (ModelState.IsValid)
+            try
             {
-                _csvHelperService.AddCategory(category);
-                return RedirectToAction("Index");
+                if (ModelState.IsValid)
+                {
+                    _csvHelperService.AddCategory(category);
+                    return RedirectToAction("Index");
+                }
+                return View(category);
             }
-            return View(category);
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+                return View(category);
+            }
+
+           
         }
 
         public IActionResult Edit(int id)
         {
             var category = _csvHelperService.GetCategoryById(id);
-            if (category == null)
+            try
             {
-                return NotFound();
+              
+                if (category == null)
+                {
+                    return NotFound();
+                }
+                return View(category);
             }
-            return View(category);
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+                return View(category);
+            }
+            
         }
 
         [HttpPost]
         public IActionResult Edit(Category category)
         {
-            if (ModelState.IsValid)
+            try
             {
-                _csvHelperService.UpdateCategory(category);
-                return RedirectToAction("Index");
+
+                if (ModelState.IsValid)
+                {
+                    _csvHelperService.UpdateCategory(category);
+                    return RedirectToAction("Index");
+                }
+                return View(category);
             }
-            return View(category);
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+                return View(category);
+            }
         }
 
         public IActionResult Delete(int id)
         {
             var category = _csvHelperService.GetCategoryById(id);
-            if (category == null)
+            try
             {
-                return NotFound();
+                if (category == null)
+                {
+                    return NotFound();
+                }
+                return View(category);
             }
-            return View(category);
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+                return View(category);
+            }
+           
         }
 
         [HttpPost, ActionName("DeleteConfirmed")]
         public IActionResult DeleteConfirmed(int id)
         {
-            _csvHelperService.DeleteCategory(id);
+            try
+            {
+                _csvHelperService.DeleteCategory(id);
+               
+            }
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+              
+            }
             return RedirectToAction("Index");
         }
     }

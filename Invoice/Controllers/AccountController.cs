@@ -3,16 +3,19 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Invoice.Services;
 
 namespace Invoice.Controllers
 {
     public class AccountController : Controller
     {
         private readonly CsvHelperService _csvHelperService;
+        private readonly GenUtility _GenUtility;
 
-        public AccountController(CsvHelperService csvHelperService)
+        public AccountController(CsvHelperService csvHelperService, GenUtility GenUtility)
         {
             _csvHelperService = csvHelperService;
+            _GenUtility = GenUtility;
         }
         [HttpGet]
         public IActionResult Login()
@@ -23,6 +26,10 @@ namespace Invoice.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(LoginView model)
         {
+            try
+            {
+
+           
             if (ModelState.IsValid)
             {
                 var user = _csvHelperService.GetUserByUsername(model.Username);
@@ -49,6 +56,12 @@ namespace Invoice.Controllers
                 }
             }
 
+           
+            }
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+            }
             return View(model);
         }
 
@@ -56,7 +69,17 @@ namespace Invoice.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+           
+            try
+            {
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+               
+            }
+          
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
+            }
             return RedirectToAction("Index", "Home");
         }
 
@@ -69,17 +92,27 @@ namespace Invoice.Controllers
         [HttpPost]
         public IActionResult Register(RegisterView model)
         {
-            if (ModelState.IsValid)
+           
+            try
             {
-                _csvHelperService.AddUser(new User
+                if (ModelState.IsValid)
                 {
-                    Username = model.Username,
-                    Password = model.Password,
-                    Email = model.Email,
-                    Address = model.Address,
-                    ContactNumber = model.ContactNumber
-                });
-                return RedirectToAction("Login", "Account");
+                    _csvHelperService.AddUser(new User
+                    {
+                        Name =model.Name,
+                        Username = model.Username,
+                        Password = model.Password,
+                        Email = model.Email,
+                        Address = model.Address,
+                        ContactNumber = model.ContactNumber
+                    });
+                    return RedirectToAction("Login", "Account");
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
             }
 
             return View(model);
@@ -88,46 +121,63 @@ namespace Invoice.Controllers
         [HttpGet]
         public IActionResult Edit()
         {
-            var username = User.Identity.Name;
-            var user = _csvHelperService.GetUserByUsername(username);
-            if (user == null)
+           
+            try
             {
-                return NotFound();
+                var username = User.Identity.Name;
+                var user = _csvHelperService.GetUserByUsername(username);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                var model = new EditProfileView
+                {
+ 
+                    Username = user.Username,
+                    Name = user.Name,
+                    Email = user.Email,
+                    Address = user.Address,
+                    ContactNumber = user.ContactNumber
+                };
+                return View(model);
             }
-
-            var model = new EditProfileView
+            catch (Exception ex)
             {
-                Username = user.Username,
-                Email = user.Email,
-                Address = user.Address,
-                ContactNumber = user.ContactNumber
-            };
-
-            return View(model);
+                _GenUtility.LogError(ex);
+                return View(new EditProfileView());
+            }
+          
         }
 
         [HttpPost]
         public IActionResult Edit(EditProfileView model)
         {
-            if (ModelState.IsValid)
+           
+            try
             {
-                var user = _csvHelperService.GetUserByUsername(model.Username);
-                if (user != null)
+                if (ModelState.IsValid)
                 {
-                    user.Email = model.Email;
-                    user.Address = model.Address;
-                    user.ContactNumber = model.ContactNumber;
-                    _csvHelperService.UpdateUser(user);
+                    var user = _csvHelperService.GetUserByUsername(model.Username);
+                    if (user != null)
+                    {
+                        user.Email = model.Email;
+                        user.Address = model.Address;
+                        user.ContactNumber = model.ContactNumber;
+                        _csvHelperService.UpdateUser(user);
 
-                    return RedirectToAction("Index", "Home");
+                        return RedirectToAction("Index", "Home");
+                    }
+                    return NotFound();
                 }
-                return NotFound();
+
+            }
+            catch (Exception ex)
+            {
+                _GenUtility.LogError(ex);
             }
 
             return View(model);
         }
-
-
-
     }
 }

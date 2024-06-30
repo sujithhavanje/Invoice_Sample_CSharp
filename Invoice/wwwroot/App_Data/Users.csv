@@ -1,3 +1,4 @@
-Username,Password,Email,Address,ContactNumber
-sujith,pass@123,sujith@gmail.com,Udupi,9886913899
-user1,pass@123,user@gmail.com,udupi,9886913899
+Name,Username,Password,Email,Address,ContactNumber
+sujith,sujith,pass@123,sujith@gmail.com,Udupi,9886913899
+user1,user1,pass@123,user@gmail.com,udupi,9886913899
+ranjith,ranjithhavanje,pass@123,ranjith@gmail.com,Havane,9886913899
