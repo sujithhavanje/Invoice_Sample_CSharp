@@ -35,3 +35,4 @@ Clickon Generate Invoice button to generate the invoice.
 Logout
 
 Logout from the application.
+
